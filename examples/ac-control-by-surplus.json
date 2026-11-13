@@ -18,7 +18,7 @@
     "z": "a1f0c0de00000001",
     "name": "",
     "server": "a1f0c0de00000002",
-    "interval": "300",
+    "interval": "60",
     "variables": "pvPower, loadsPower, feedinPower, gridConsumptionPower, SoC",
     "x": 160,
     "y": 100,
@@ -27,14 +27,16 @@
         "a1f0c0de00000004",
         "a1f0c0de00000005"
       ]
-    ]
+    ],
+    "minElevation": "20",
+    "locationEnv": "location"
   },
   {
     "id": "a1f0c0de00000004",
     "type": "function",
     "z": "a1f0c0de00000001",
     "name": "AC on/off by surplus",
-    "func": "// Turns the AC on when there's enough surplus going to the grid, off when we start importing.\n// Once the AC is running its own draw comes out of the export, so the two thresholds must be\n// far enough apart (ON_EXPORT should be more than the AC's draw) or it will flip on and off.\nconst ON_EXPORT = 2.5;   // kW exported before turning the AC on\nconst OFF_IMPORT = 0.3;  // kW imported before turning the AC off\nconst ON_POLLS = 2;      // polls in a row above ON_EXPORT before switching on\nconst OFF_POLLS = 2;     // polls in a row above OFF_IMPORT before switching off\nconst MIN_SOC = 0;       // optionally require the battery to be at least this full (%)\n\nconst grid = msg.payload.gridPower;\nif (typeof grid !== \"number\") {\n    return null;\n}\n\nlet state = context.get(\"state\") || \"off\";\nlet count = context.get(\"count\") || 0;\nconst soc = msg.payload.SoC;\nconst socOk = typeof soc !== \"number\" || soc >= MIN_SOC;\n\nif (state === \"off\") {\n    count = (grid >= ON_EXPORT && socOk) ? count + 1 : 0;\n    if (count >= ON_POLLS) {\n        state = \"on\";\n        count = 0;\n    }\n} else {\n    count = (grid <= -OFF_IMPORT || !socOk) ? count + 1 : 0;\n    if (count >= OFF_POLLS) {\n        state = \"off\";\n        count = 0;\n    }\n}\n\nconst changed = state !== context.get(\"state\");\ncontext.set(\"state\", state);\ncontext.set(\"count\", count);\nnode.status({ fill: state === \"on\" ? \"green\" : \"grey\", shape: \"dot\", text: `AC ${state}, grid ${grid} kW` });\n\n// Only send when the state changes\nreturn changed ? { topic: \"ac\", payload: state } : null;\n",
+    "func": "// Turns the AC on when there's enough surplus going to the grid, off when we start importing.\n// Once the AC is running its own draw comes out of the export, so the two thresholds must be\n// far enough apart (ON_EXPORT should be more than the AC's draw) or it will flip on and off.\nconst ON_EXPORT = 2.5;   // kW exported before turning the AC on\nconst OFF_IMPORT = 0.3;  // kW imported before turning the AC off\nconst ON_POLLS = 2;      // polls in a row above ON_EXPORT before switching on\nconst OFF_POLLS = 2;     // polls in a row above OFF_IMPORT before switching off\nconst MIN_SOC = 0;       // optionally require the battery to be at least this full (%)\n\nlet state = context.get(\"state\") || \"off\";\nlet count = context.get(\"count\") || 0;\n\n// The FoxESS node stops polling when the sun gets low, and sends sun.up = false once\nif (msg.sun && msg.sun.up === false) {\n    context.set(\"state\", \"off\");\n    context.set(\"count\", 0);\n    node.status({ fill: \"grey\", shape: \"dot\", text: `AC off, sun ${msg.sun.elevation}°` });\n    return state === \"on\" ? { topic: \"ac\", payload: \"off\" } : null;\n}\n\nconst grid = msg.payload.gridPower;\nif (typeof grid !== \"number\") {\n    return null;\n}\nconst soc = msg.payload.SoC;\nconst socOk = typeof soc !== \"number\" || soc >= MIN_SOC;\n\nif (state === \"off\") {\n    count = (grid >= ON_EXPORT && socOk) ? count + 1 : 0;\n    if (count >= ON_POLLS) {\n        state = \"on\";\n        count = 0;\n    }\n} else {\n    count = (grid <= -OFF_IMPORT || !socOk) ? count + 1 : 0;\n    if (count >= OFF_POLLS) {\n        state = \"off\";\n        count = 0;\n    }\n}\n\nconst changed = state !== context.get(\"state\");\ncontext.set(\"state\", state);\ncontext.set(\"count\", count);\nnode.status({ fill: state === \"on\" ? \"green\" : \"grey\", shape: \"dot\", text: `AC ${state}, grid ${grid} kW` });\n\n// Only send when the state changes\nreturn changed ? { topic: \"ac\", payload: state } : null;\n",
     "outputs": 1,
     "x": 400,
     "y": 100,

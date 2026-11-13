@@ -6,6 +6,8 @@
             name: { value: "" },
             server: { value: "", type: "foxess-config", required: true },
             interval: { value: 300, validate: function (v) { return v === "" || (Number(v) === 0 || Number(v) >= 60); } },
+            minElevation: { value: "", validate: function (v) { return v === "" || (Number(v) >= -90 && Number(v) <= 90); } },
+            locationEnv: { value: "location" },
             variables: { value: "pvPower, loadsPower, feedinPower, gridConsumptionPower, SoC, batChargePower, batDischargePower" }
         },
         inputs: 1,
@@ -31,6 +33,15 @@
         <label for="node-input-interval"><i class="fa fa-repeat"></i> Poll every</label>
         <input type="number" id="node-input-interval" min="0" step="1" style="width: 100px"> seconds
         <div class="form-tips">0 = only poll when a message arrives. Minimum 60.</div>
+    </div>
+    <div class="form-row">
+        <label for="node-input-minElevation"><i class="fa fa-sun-o"></i> Sun above</label>
+        <input type="number" id="node-input-minElevation" min="-90" max="90" step="1" style="width: 100px" placeholder="always"> degrees
+        <div class="form-tips">Only poll on the timer while the sun is at least this high. Blank = poll around the clock.</div>
+    </div>
+    <div class="form-row">
+        <label for="node-input-locationEnv"><i class="fa fa-map-marker"></i> Location env</label>
+        <input type="text" id="node-input-locationEnv" placeholder="location">
     </div>
     <div class="form-row">
         <label for="node-input-variables"><i class="fa fa-list"></i> Variables</label>
@@ -63,12 +74,25 @@
         <dd>Time the inverter last reported to the cloud.</dd>
         <dt>deviceSN <span class="property-type">string</span></dt>
         <dd>Inverter serial number.</dd>
+        <dt class="optional">sun <span class="property-type">object</span></dt>
+        <dd><code>{ elevation, up }</code> when <i>Sun above</i> is set. <code>elevation</code> is in degrees,
+            <code>up</code> is whether it's at or above the threshold.</dd>
     </dl>
 
     <h3>Details</h3>
     <p>The FoxESS API allows about 1440 calls per inverter per day, so the interval can't be below 60 seconds.
        Most data loggers only upload every few minutes, so 300 seconds is usually enough; check <code>msg.time</code>
        to see how fresh the data is.</p>
+    <h3>Sun-based polling</h3>
+    <p>Set <i>Sun above</i> to only poll while the sun is at least that many degrees above the horizon
+       (e.g. 20). The timer keeps running at night but makes no API calls.
+       When the sun drops below the threshold the node sends one message with an empty <code>payload</code> and
+       <code>msg.sun.up = false</code>, so flows can switch things off. Messages sent to the node's input
+       always poll, whatever the sun is doing.</p>
+    <p>The location comes from the environment variable named in <i>Location env</i> (default <code>location</code>),
+       set on the flow, group or in the global environment (<i>Settings &gt; Environment</i>).
+       Accepted formats: <code>-33.86,151.21</code>, <code>-33.86 151.21</code>, <code>[-33.86,151.21]</code>
+       or <code>{"lat":-33.86,"lon":151.21}</code>.</p>
     <p><code>feedinPower</code> and <code>gridConsumptionPower</code> are always requested so <code>gridPower</code> can be calculated.
        Leave <i>Variables</i> blank to fetch everything the inverter reports.</p>
 </script>

@@ -42,6 +42,16 @@ msg.deviceSN = "..."
 
 Leave *Variables* blank to get everything your inverter reports.
 
+### Only polling while the sun is up
+
+Set **Sun above** (e.g. `20`) to only poll on the timer while the sun is at least that many degrees above the horizon.
+The location is read from an environment variable, `location` by default (*Settings > Environment*, or on the flow or group).
+It accepts `-33.86,151.21`, `-33.86 151.21`, `[-33.86,151.21]` or `{"lat":-33.86,"lon":151.21}`.
+
+Each output message then includes `msg.sun = { elevation, up }`. When the sun drops below the threshold the node sends
+one message with an empty `payload` and `msg.sun.up = false`, so a flow can switch things off, then stops polling until
+the sun is back above the threshold. Messages sent to the node's input always poll, whatever the sun is doing.
+
 ### Rate limits and data freshness
 
 The Open API allows about 1440 calls per inverter per day, which is one a minute.
@@ -54,7 +64,7 @@ Import `examples/ac-control-by-surplus.json` (*Menu > Import > Examples > node-r
 It feeds `gridPower` into a function node with hysteresis:
 
 - **on** after 2 polls in a row exporting ≥ 2.5 kW
-- **off** after 2 polls in a row importing ≥ 0.3 kW
+- **off** after 2 polls in a row importing ≥ 0.3 kW, or when the sun drops below 20° and polling stops
 
 It sends `"on"` or `"off"` only when the state changes. Swap the final debug node for whatever controls your AC
 (Home Assistant service call, Tasmota/MQTT, a Broadlink IR blaster, etc.).

@@ -58,3 +58,22 @@ test("parseVariables splits commas and whitespace", () => {
     assert.deepStrictEqual(parseVariables(" pvPower, SoC  loadsPower,,"), ["pvPower", "SoC", "loadsPower"]);
     assert.deepStrictEqual(parseVariables(""), []);
 });
+
+const { parseLocation, sunElevation } = require("../lib/sun");
+
+test("parseLocation accepts the usual formats", () => {
+    const want = { lat: -33.86, lon: 151.21 };
+    for (const v of ["-33.86,151.21", " -33.86 151.21 ", "-33.86;151.21", "[-33.86,151.21]",
+        '{"lat":-33.86,"lon":151.21}', [-33.86, 151.21], { latitude: -33.86, longitude: 151.21 }, { lat: "-33.86", lng: "151.21" }]) {
+        assert.deepStrictEqual(parseLocation(v), want, JSON.stringify(v));
+    }
+    for (const v of [undefined, "", "abc", "100,0", "{bad json", { lat: 1 }]) {
+        assert.strictEqual(parseLocation(v), null, JSON.stringify(v));
+    }
+});
+
+test("sunElevation is high at Sydney midday and negative at midnight", () => {
+    // 2026-12-21 is midsummer in Sydney (UTC+11)
+    assert.ok(sunElevation(new Date("2026-12-21T02:00:00Z"), -33.86, 151.21) > 70);
+    assert.ok(sunElevation(new Date("2026-12-21T13:00:00Z"), -33.86, 151.21) < 0);
+});
