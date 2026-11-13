@@ -5,9 +5,10 @@
         defaults: {
             name: { value: "" },
             server: { value: "", type: "foxess-config", required: true },
-            interval: { value: 300, validate: function (v) { return v === "" || (Number(v) === 0 || Number(v) >= 60); } },
+            interval: { value: 300, validate: function (v) { return v === "" || (Number(v) === 0 || Number(v) >= 10); } },
             minElevation: { value: "", validate: function (v) { return v === "" || (Number(v) >= -90 && Number(v) <= 90); } },
             locationEnv: { value: "location" },
+            dailyCalls: { value: 1440, validate: function (v) { return v === "" || Number(v) >= 1; } },
             variables: { value: "pvPower, loadsPower, feedinPower, gridConsumptionPower, SoC, batChargePower, batDischargePower" }
         },
         inputs: 1,
@@ -32,7 +33,7 @@
     <div class="form-row">
         <label for="node-input-interval"><i class="fa fa-repeat"></i> Poll every</label>
         <input type="number" id="node-input-interval" min="0" step="1" style="width: 100px"> seconds
-        <div class="form-tips">0 = only poll when a message arrives. Minimum 60.</div>
+        <div class="form-tips">0 = only poll when a message arrives. Minimum 10, and raised if needed to stay within the daily call limit.</div>
     </div>
     <div class="form-row">
         <label for="node-input-minElevation"><i class="fa fa-sun-o"></i> Sun above</label>
@@ -42,6 +43,11 @@
     <div class="form-row">
         <label for="node-input-locationEnv"><i class="fa fa-map-marker"></i> Location env</label>
         <input type="text" id="node-input-locationEnv" placeholder="location">
+    </div>
+    <div class="form-row">
+        <label for="node-input-dailyCalls"><i class="fa fa-tachometer"></i> Calls per day</label>
+        <input type="number" id="node-input-dailyCalls" min="1" step="1" style="width: 100px">
+        <div class="form-tips">FoxESS allows about 1440. Lower it if other tools use the same inverter.</div>
     </div>
     <div class="form-row">
         <label for="node-input-variables"><i class="fa fa-list"></i> Variables</label>
@@ -80,9 +86,14 @@
     </dl>
 
     <h3>Details</h3>
-    <p>The FoxESS API allows about 1440 calls per inverter per day, so the interval can't be below 60 seconds.
-       Most data loggers only upload every few minutes, so 300 seconds is usually enough; check <code>msg.time</code>
-       to see how fresh the data is.</p>
+    <p>The FoxESS API allows about 1440 calls per inverter per day. At the start of each day the node works out the
+       shortest interval that keeps that day's timer polls within <i>Calls per day</i>, and uses it if it's longer than
+       <i>Poll every</i>: 60 seconds when polling around the clock, less when <i>Sun above</i> limits polling to daylight
+       (e.g. about 25 seconds for 10 hours of sun). It logs a warning when it does this.
+       Polls triggered by input messages aren't counted, so lower <i>Calls per day</i> to leave room for them and for
+       other tools using the same inverter.</p>
+    <p>       Current data loggers upload every few seconds, so each poll returns close to live values;
+       <code>msg.time</code> shows when the inverter last reported, in case the logger drops offline.</p>
     <h3>Sun-based polling</h3>
     <p>Set <i>Sun above</i> to only poll while the sun is at least that many degrees above the horizon
        (e.g. 20). The timer keeps running at night but makes no API calls.

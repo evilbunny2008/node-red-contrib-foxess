@@ -2,8 +2,23 @@
 
 const { parseLocation, sunElevation } = require("../lib/sun");
 
-// FoxESS Open API allows roughly 1440 calls per inverter per day, i.e. one a minute.
-const MIN_INTERVAL = 60;
+// FoxESS Open API allows roughly 1440 calls per inverter per day. The poll interval is stretched so a
+// day's polling fits in that budget: once a minute around the clock, or faster when only polling in daylight.
+const DAILY_LIMIT = 1440;
+const MIN_INTERVAL = 10;
+
+// Seconds today (host local time) that the sun spends at or above minElevation, sampled each minute
+function secondsAboveToday(loc, minElevation) {
+    const midnight = new Date();
+    midnight.setHours(0, 0, 0, 0);
+    let seconds = 0;
+    for (let t = 0; t < 86400; t += 60) {
+        if (sunElevation(new Date(midnight.getTime() + t * 1000), loc.lat, loc.lon) >= minElevation) {
+            seconds += 60;
+        }
+    }
+    return seconds;
+}
 
 // Needed to work out gridPower, so always requested.
 const GRID_VARS = ["feedinPower", "gridConsumptionPower"];
@@ -40,6 +55,7 @@ module.exports = function (RED) {
         const minElevation = config.minElevation === undefined || String(config.minElevation).trim() === ""
             ? null : Number(config.minElevation);
         const locationEnv = (config.locationEnv || "location").trim();
+        const dailyCalls = Number(config.dailyCalls) || DAILY_LIMIT;
         const variables = parseVariables(config.variables);
         if (variables.length > 0) {
             for (const v of GRID_VARS) {
@@ -48,17 +64,13 @@ module.exports = function (RED) {
         }
 
         let timer = null;
-        let startTimer = null;
         let busy = false;
         let sunUp = null;
         let sunError = null;
         let lastSN = null;
 
-        // Returns { elevation, up } or null when sun gating is off or the location can't be read
-        function checkSun() {
-            if (minElevation === null) {
-                return null;
-            }
+        // Returns { lat, lon }, or null (reporting the error once) if the env var can't be parsed
+        function getLocation() {
             const raw = RED.util.getSetting(node, locationEnv);
             const loc = parseLocation(raw);
             if (!loc) {
@@ -71,6 +83,18 @@ module.exports = function (RED) {
                 return null;
             }
             sunError = null;
+            return loc;
+        }
+
+        // Returns { elevation, up } or null when sun gating is off or the location can't be read
+        function checkSun() {
+            if (minElevation === null) {
+                return null;
+            }
+            const loc = getLocation();
+            if (!loc) {
+                return null;
+            }
             const elevation = Math.round(sunElevation(new Date(), loc.lat, loc.lon) * 100) / 100;
             return { elevation, up: elevation >= minElevation };
         }
@@ -129,11 +153,21 @@ module.exports = function (RED) {
             poll(msg, send, done);
         });
 
-        if (interval > 0) {
-            const seconds = Math.max(interval, MIN_INTERVAL);
-            if (seconds !== interval) {
-                node.warn(`Interval raised to ${MIN_INTERVAL}s to stay within the FoxESS API rate limit`);
+        // Shortest interval that keeps today's timer polls within dailyCalls
+        function intervalForToday() {
+            let pollingSeconds = 86400;
+            if (minElevation !== null) {
+                const loc = getLocation();
+                if (loc) {
+                    pollingSeconds = secondsAboveToday(loc, minElevation);
+                }
             }
+            return Math.max(interval, MIN_INTERVAL, Math.ceil(pollingSeconds / dailyCalls));
+        }
+
+        if (interval > 0) {
+            let day = null;
+            let seconds = interval;
             const tick = () => {
                 if (minElevation !== null) {
                     const sun = checkSun();
@@ -153,15 +187,26 @@ module.exports = function (RED) {
                 }
                 poll(null, node.send.bind(node));
             };
-            startTimer = setTimeout(tick, 2000);
-            timer = setInterval(tick, seconds * 1000);
+            const run = () => {
+                const today = new Date().toDateString();
+                if (today !== day) {
+                    day = today;
+                    const next = intervalForToday();
+                    if (next !== seconds && next > interval) {
+                        node.warn(`Polling every ${next}s today to stay within ${dailyCalls} API calls per day`);
+                    }
+                    seconds = next;
+                }
+                tick();
+                timer = setTimeout(run, seconds * 1000);
+            };
+            timer = setTimeout(run, 2000);
         } else {
             node.status({});
         }
 
         node.on("close", () => {
-            clearTimeout(startTimer);
-            clearInterval(timer);
+            clearTimeout(timer);
         });
     }
 
@@ -170,3 +215,4 @@ module.exports = function (RED) {
 
 module.exports.flatten = flatten;
 module.exports.parseVariables = parseVariables;
+module.exports.secondsAboveToday = secondsAboveToday;

@@ -77,3 +77,13 @@ test("sunElevation is high at Sydney midday and negative at midnight", () => {
     assert.ok(sunElevation(new Date("2026-12-21T02:00:00Z"), -33.86, 151.21) > 70);
     assert.ok(sunElevation(new Date("2026-12-21T13:00:00Z"), -33.86, 151.21) < 0);
 });
+
+const { secondsAboveToday } = require("../nodes/foxess-real");
+
+test("secondsAboveToday covers the daylight hours above the threshold", () => {
+    const sydney = { lat: -33.86, lon: 151.21 };
+    const above20 = secondsAboveToday(sydney, 20);
+    assert.ok(above20 > 6 * 3600 && above20 < 14 * 3600, `${above20 / 3600} hours`);
+    assert.ok(secondsAboveToday(sydney, -90) === 86400);
+    assert.ok(secondsAboveToday(sydney, 90) === 0);
+});

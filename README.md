@@ -27,7 +27,7 @@ See it in the [Node-RED Flow Library](https://flows.nodered.org/node/node-red-co
 
 ## real-time node
 
-Polls `/op/v1/device/real/query` every *n* seconds (default 300, minimum 60), or whenever it gets a message.
+Polls `/op/v1/device/real/query` every *n* seconds (default 300, minimum 10), or whenever it gets a message.
 
 Output:
 
@@ -59,9 +59,17 @@ the sun is back above the threshold. Messages sent to the node's input always po
 
 ### Rate limits and data freshness
 
-The Open API allows about 1440 calls per inverter per day, which is one a minute.
-Most data loggers only upload every few minutes, so polling faster than about 5 minutes mostly returns the same values.
-Use `msg.time` to see how old the data is.
+The Open API allows about 1440 calls per inverter per day. At the start of each day the node works out the shortest
+interval that keeps that day's polling within **Calls per day** (default 1440), and uses it if it's longer than your interval:
+
+- polling around the clock: 60 seconds
+- with **Sun above** set: the hours of sun above the threshold divided by the budget, e.g. 10 hours at 1440 calls is about 25 seconds
+
+It logs a warning when it lengthens your interval. Polls triggered by input messages aren't counted, so lower
+**Calls per day** to leave room for them, and for anything else using the same inverter (e.g. FreePowerMaximiser).
+
+Current data loggers upload every few seconds, so each poll returns close to live values.
+`msg.time` shows when the inverter last reported, in case the logger drops offline.
 
 ## Example: air conditioner on surplus
 
