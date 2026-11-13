@@ -1,0 +1,60 @@
+<script type="text/javascript">
+    RED.nodes.registerType("foxess-config", {
+        category: "config",
+        defaults: {
+            name: { value: "" },
+            sn: { value: "" },
+            domain: { value: "https://www.foxesscloud.com", required: true },
+            timeZone: { value: "" }
+        },
+        credentials: {
+            apiKey: { type: "password", required: true }
+        },
+        label: function () {
+            return this.name || this.sn || "FoxESS Cloud";
+        },
+        oneditprepare: function () {
+            if (!this.timeZone) {
+                $("#node-config-input-timeZone").attr("placeholder", Intl.DateTimeFormat().resolvedOptions().timeZone);
+            }
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="foxess-config">
+    <div class="form-row">
+        <label for="node-config-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-config-input-name">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-apiKey"><i class="fa fa-key"></i> API key</label>
+        <input type="password" id="node-config-input-apiKey">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-sn"><i class="fa fa-barcode"></i> Inverter SN</label>
+        <input type="text" id="node-config-input-sn" placeholder="auto-detect if only one inverter">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-domain"><i class="fa fa-globe"></i> API URL</label>
+        <input type="text" id="node-config-input-domain">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-timeZone"><i class="fa fa-clock-o"></i> Time zone</label>
+        <input type="text" id="node-config-input-timeZone">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="foxess-config">
+    <p>Connection to the FoxESS Cloud Open API.</p>
+    <h3>Properties</h3>
+    <dl class="message-properties">
+        <dt>API key</dt>
+        <dd>36 character key generated at foxesscloud.com under <i>User Profile &gt; API Management</i>.</dd>
+        <dt>Inverter SN</dt>
+        <dd>Inverter serial number. Leave blank to use the only inverter on the account.</dd>
+        <dt>API URL</dt>
+        <dd>Defaults to <code>https://www.foxesscloud.com</code>.</dd>
+        <dt>Time zone</dt>
+        <dd>IANA time zone sent with each request, e.g. <code>Australia/Sydney</code>. Defaults to the Node-RED host's time zone.</dd>
+    </dl>
+</script>
