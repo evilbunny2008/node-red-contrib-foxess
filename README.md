@@ -7,12 +7,17 @@ It only reads data. It doesn't change inverter settings or schedules.
 
 ## Install
 
+In the Node-RED editor, open *Menu > Manage palette > Install*, search for `node-red-contrib-foxess` and click **Install**.
+
+Or from the command line, then restart Node-RED:
+
 ```sh
 cd ~/.node-red
-npm install /path/to/node-red-contrib-foxess
+npm install node-red-contrib-foxess
 ```
 
-Restart Node-RED. The **real-time** node appears under the *FoxESS* palette category.
+The **real-time** node appears under the *FoxESS* palette category.
+See it in the [Node-RED Flow Library](https://flows.nodered.org/node/node-red-contrib-foxess).
 
 ## Setup
 
