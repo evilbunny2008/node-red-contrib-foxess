@@ -87,3 +87,27 @@ test("secondsAboveToday covers the daylight hours above the threshold", () => {
     assert.ok(secondsAboveToday(sydney, -90) === 86400);
     assert.ok(secondsAboveToday(sydney, 90) === 0);
 });
+
+const { toValue } = require("../nodes/foxess-setting");
+
+test("getSetting and setSetting post the setting endpoints", async (t) => {
+    const calls = [];
+    t.mock.method(global, "fetch", async (url, opts) => {
+        calls.push({ url, body: JSON.parse(opts.body) });
+        return new Response(JSON.stringify({ errno: 0, result: { value: "-39", unit: "W" } }));
+    });
+    const client = new FoxESSClient({ apiKey: KEY });
+    await client.setSetting("SN1", "MeterCompensation", -39);
+    const result = await client.getSetting("SN1", "MeterCompensation");
+    assert.strictEqual(calls[0].url, "https://www.foxesscloud.com/op/v0/device/setting/set");
+    assert.deepStrictEqual(calls[0].body, { sn: "SN1", key: "MeterCompensation", value: "-39" });
+    assert.strictEqual(calls[1].url, "https://www.foxesscloud.com/op/v0/device/setting/get");
+    assert.deepStrictEqual(calls[1].body, { sn: "SN1", key: "MeterCompensation" });
+    assert.strictEqual(result.value, "-39");
+});
+
+test("toValue converts numeric strings only", () => {
+    assert.strictEqual(toValue("-39"), -39);
+    assert.strictEqual(toValue("SelfUse"), "SelfUse");
+    assert.strictEqual(toValue(""), "");
+});

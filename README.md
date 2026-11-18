@@ -3,7 +3,7 @@
 Node-RED nodes that poll the [FoxESS Cloud](https://www.foxesscloud.com) Open API for real-time inverter data.
 They also work out how much power is going to the grid, so you can automate loads (e.g. an air conditioner) around your solar surplus.
 
-It only reads data. It doesn't change inverter settings or schedules.
+The **setting** node can also read and write named inverter settings (e.g. `MeterCompensation`).
 
 ## Install
 
@@ -16,7 +16,7 @@ cd ~/.node-red
 npm install node-red-contrib-foxess
 ```
 
-The **real-time** node appears under the *FoxESS* palette category.
+The **real-time** and **setting** nodes appear under the *FoxESS* palette category.
 See it in the [Node-RED Flow Library](https://flows.nodered.org/node/node-red-contrib-foxess).
 
 ## Setup
@@ -70,6 +70,18 @@ It logs a warning when it lengthens your interval. Polls triggered by input mess
 
 Current data loggers upload every few seconds, so each poll returns close to live values.
 `msg.time` shows when the inverter last reported, in case the logger drops offline.
+
+## setting node
+
+Reads or writes a named inverter setting via `/op/v0/device/setting/get` and `/op/v0/device/setting/set`.
+Pick *Read* or *Write* and the setting name (e.g. `MeterCompensation`, `WorkMode`, `MinSoc`).
+`msg.key` overrides the name and `msg.action` (`"get"` / `"set"`) overrides the action.
+
+- **Read**: outputs `msg.payload` = the current value (numbers are converted), and `msg.setting` = the full
+  result, e.g. `{ value: "-39", unit: "W", precision: 1, range: { lo, hi } }`.
+- **Write**: sets the setting to `msg.payload`, and outputs the value written.
+
+Each message is one API call, counted against the same daily limit as polling.
 
 ## Example: air conditioner on surplus
 
