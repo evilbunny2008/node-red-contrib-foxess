@@ -1,0 +1,73 @@
+<script type="text/javascript">
+    RED.nodes.registerType("foxess-setting", {
+        category: "FoxESS",
+        color: "#F3B567",
+        defaults: {
+            name: { value: "" },
+            server: { value: "", type: "foxess-config", required: true },
+            action: { value: "get" },
+            key: { value: "" }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "font-awesome/fa-sliders",
+        label: function () {
+            return this.name || (this.action === "set" ? "set " : "get ") + (this.key || "setting");
+        },
+        paletteLabel: "setting"
+    });
+</script>
+
+<script type="text/html" data-template-name="foxess-setting">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-server"><i class="fa fa-cloud"></i> Account</label>
+        <input type="text" id="node-input-server">
+    </div>
+    <div class="form-row">
+        <label for="node-input-action"><i class="fa fa-exchange"></i> Action</label>
+        <select id="node-input-action">
+            <option value="get">Read</option>
+            <option value="set">Write</option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-key"><i class="fa fa-sliders"></i> Setting</label>
+        <input type="text" id="node-input-key" placeholder="e.g. MeterCompensation">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="foxess-setting">
+    <p>Reads or writes a named inverter setting, such as <code>MeterCompensation</code>, <code>WorkMode</code> or <code>MinSoc</code>.</p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt class="optional">payload <span class="property-type">number | string</span></dt>
+        <dd>When writing, the value to set.</dd>
+        <dt class="optional">key <span class="property-type">string</span></dt>
+        <dd>Overrides the setting name.</dd>
+        <dt class="optional">action <span class="property-type">string</span></dt>
+        <dd><code>"get"</code> or <code>"set"</code>, overrides the node's action.</dd>
+        <dt class="optional">sn <span class="property-type">string</span></dt>
+        <dd>Overrides the inverter serial number.</dd>
+    </dl>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">number | string</span></dt>
+        <dd>The setting's current value (read) or the value just written (write). Numeric values are converted to numbers.</dd>
+        <dt class="optional">setting <span class="property-type">object</span></dt>
+        <dd>When reading, the full API result, e.g. <code>{ value, unit, precision, range: { lo, hi } }</code>.</dd>
+        <dt>key <span class="property-type">string</span></dt>
+        <dd>The setting name.</dd>
+        <dt>deviceSN <span class="property-type">string</span></dt>
+        <dd>Inverter serial number.</dd>
+    </dl>
+
+    <h3>Details</h3>
+    <p>Uses <code>/op/v0/device/setting/get</code> and <code>/op/v0/device/setting/set</code>. Each message is one API call,
+       and counts towards the same daily limit as the real-time node.</p>
+</script>
