@@ -6,7 +6,8 @@
             name: { value: "" },
             server: { value: "", type: "foxess-config", required: true },
             action: { value: "get" },
-            key: { value: "" }
+            key: { value: "" },
+            value: { value: "" }
         },
         inputs: 1,
         outputs: 1,
@@ -14,7 +15,12 @@
         label: function () {
             return this.name || (this.action === "set" ? "set " : "get ") + (this.key || "setting");
         },
-        paletteLabel: "setting"
+        paletteLabel: "setting",
+        oneditprepare: function () {
+            $("#node-input-action").on("change", function () {
+                $("#foxess-setting-value-row").toggle($(this).val() === "set");
+            }).trigger("change");
+        }
     });
 </script>
 
@@ -38,6 +44,10 @@
         <label for="node-input-key"><i class="fa fa-sliders"></i> Setting</label>
         <input type="text" id="node-input-key" placeholder="e.g. MeterCompensation">
     </div>
+    <div class="form-row" id="foxess-setting-value-row">
+        <label for="node-input-value"><i class="fa fa-pencil"></i> Value</label>
+        <input type="text" id="node-input-value" placeholder="blank = use msg.payload">
+    </div>
 </script>
 
 <script type="text/html" data-help-name="foxess-setting">
@@ -46,7 +56,7 @@
     <h3>Inputs</h3>
     <dl class="message-properties">
         <dt class="optional">payload <span class="property-type">number | string</span></dt>
-        <dd>When writing, the value to set.</dd>
+        <dd>When writing, the value to set if <i>Value</i> is blank on the node.</dd>
         <dt class="optional">key <span class="property-type">string</span></dt>
         <dd>Overrides the setting name.</dd>
         <dt class="optional">action <span class="property-type">string</span></dt>
@@ -68,6 +78,8 @@
     </dl>
 
     <h3>Details</h3>
+    <p>When writing, a <i>Value</i> set on the node is used in preference to <code>msg.payload</code>, so any message
+       (e.g. an inject with a timestamp) can trigger the write.</p>
     <p>Uses <code>/op/v0/device/setting/get</code> and <code>/op/v0/device/setting/set</code>. Each message is one API call,
        and counts towards the same daily limit as the real-time node.</p>
 </script>

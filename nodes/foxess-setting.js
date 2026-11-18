@@ -13,6 +13,7 @@ module.exports = function (RED) {
         const server = RED.nodes.getNode(config.server);
         const action = config.action === "set" ? "set" : "get";
         const key = (config.key || "").trim();
+        const fixedValue = (config.value === undefined ? "" : String(config.value)).trim();
 
         if (!server) {
             node.status({ fill: "red", shape: "ring", text: "not configured" });
@@ -31,9 +32,9 @@ module.exports = function (RED) {
                 const client = server.getClient();
 
                 if (act === "set") {
-                    const value = msg.payload;
+                    const value = fixedValue !== "" ? fixedValue : msg.payload;
                     if (value === undefined || value === null || value === "" || typeof value === "object") {
-                        throw new Error(`msg.payload must be the value to set ${name} to`);
+                        throw new Error(`No value to set ${name} to, set it on the node or in msg.payload`);
                     }
                     await client.setSetting(sn, name, value);
                     msg.payload = toValue(String(value));

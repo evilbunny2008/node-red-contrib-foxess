@@ -79,7 +79,7 @@ Pick *Read* or *Write* and the setting name (e.g. `MeterCompensation`, `WorkMode
 
 - **Read**: outputs `msg.payload` = the current value (numbers are converted), and `msg.setting` = the full
   result, e.g. `{ value: "-39", unit: "W", precision: 1, range: { lo, hi } }`.
-- **Write**: sets the setting to `msg.payload`, and outputs the value written.
+- **Write**: sets the setting to *Value*, or to `msg.payload` if *Value* is blank, and outputs the value written.
 
 Each message is one API call, counted against the same daily limit as polling.
 
